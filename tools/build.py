@@ -35,7 +35,8 @@ def run(*cmd: str, cwd: str | None = None) -> None:
     subprocess.run(cmd, check=True, cwd=cwd)
 
 
-def build(original: str, out: str, driver: str | None, key: str, cert: str) -> None:
+def build(original: str, out: str, driver: str | None, key: str, cert: str,
+          mali_routing: bool = False, version_code: int = 407) -> None:
     work = Path(tempfile.mkdtemp(prefix="blbuild."))
     apk = work / "patched.apk"
     shutil.copyfile(original, apk)
@@ -50,8 +51,13 @@ def build(original: str, out: str, driver: str | None, key: str, cert: str) -> N
         z.extract("AndroidManifest.xml", work)
 
     run(sys.executable, str(ROOT / "patches/dex_always_extract.py"), str(work / "classes.dex"))
-    run(sys.executable, str(ROOT / "patches/libmain_mali_driver.py"), str(work / "lib/arm64-v8a/libmain.so"))
-    run(sys.executable, str(ROOT / "patches/bump_version.py"), str(work / "AndroidManifest.xml"), "406")
+    if mali_routing:
+        # Only for builds that also ship a working Mali driver in a slot.
+        # With the stock Adreno-only Turnip zips this makes things WORSE: the
+        # engine would pick the useless Turnip driver and crash, instead of
+        # the stable system-driver + DXVK path.
+        run(sys.executable, str(ROOT / "patches/libmain_mali_driver.py"), str(work / "lib/arm64-v8a/libmain.so"))
+    run(sys.executable, str(ROOT / "patches/bump_version.py"), str(work / "AndroidManifest.xml"), str(version_code))
 
     run("zip", "-q", str(apk), "classes.dex", cwd=work)
     run("zip", "-q", str(apk), "lib/arm64-v8a/libmain.so", cwd=work)
@@ -71,11 +77,20 @@ def build(original: str, out: str, driver: str | None, key: str, cert: str) -> N
 if __name__ == "__main__":
     args = sys.argv[1:]
     driver = None
+    mali_routing = False
+    version_code = 407
     if "--driver" in args:
         i = args.index("--driver")
         driver = args[i + 1]
         del args[i:i + 2]
+    if "--mali-routing" in args:
+        args.remove("--mali-routing")
+        mali_routing = True
+    if "--version-code" in args:
+        i = args.index("--version-code")
+        version_code = int(args[i + 1])
+        del args[i:i + 2]
     original, out = args[0], args[1]
     key = str(ROOT / "keys/debug.pem")
     cert = str(ROOT / "keys/debug.crt")
-    build(original, out, driver, key, cert)
+    build(original, out, driver, key, cert, mali_routing, version_code)
