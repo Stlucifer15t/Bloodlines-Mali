@@ -30,9 +30,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DRIVER_SLOT = "assets/drivers/turnip_classic.zip"
 
 
-def run(*cmd: str) -> None:
-    print("+", " ".join(cmd))
-    subprocess.run(cmd, check=True)
+def run(*cmd: str, cwd: str | None = None) -> None:
+    print("+", " ".join(cmd), f"(cwd={cwd})" if cwd else "")
+    subprocess.run(cmd, check=True, cwd=cwd)
 
 
 def build(original: str, out: str, driver: str | None, key: str, cert: str) -> None:
