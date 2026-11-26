@@ -60,11 +60,7 @@ def build(original: str, out: str, driver: str | None, key: str, cert: str) -> N
         run(sys.executable, str(ROOT / "patches/repack_driver.py"), driver, str(slot))
         run("zip", "-q", str(apk), DRIVER_SLOT, cwd=work)
 
-    run(
-        sys.executable, "-c",
-        "from sign_apk.cli import main; import sys; "
-        f"sys.argv=['sign-apk','sign',{str(apk)!r},{out!r},'--key',{key!r},'--cert',{cert!r}']; main()",
-    )
+    run(sys.executable, str(ROOT / "tools/sign.py"), "sign", str(apk), out, "--key", key, "--cert", cert)
     shutil.rmtree(work, ignore_errors=True)
     print(f"done: {out}")
 
