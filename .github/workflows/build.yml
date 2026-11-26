@@ -1,0 +1,29 @@
+name: Build patched APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install signer
+        run: pip install git+https://github.com/adityatelange/sign-apk-py
+
+      - name: Build patched APK
+        run: |
+          python3 tools/build.py base/Bloodlines-v0.4.2.apk Bloodlines-v0.4.2-mali-patched.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bloodlines-mali-patched-apk
+          path: Bloodlines-v0.4.2-mali-patched.apk
