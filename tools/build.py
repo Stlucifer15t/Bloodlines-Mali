@@ -41,18 +41,21 @@ def build(original: str, out: str, driver: str | None, key: str, cert: str) -> N
     shutil.copyfile(original, apk)
 
     # strip the entries we replace or that belong to the old signature
-    remove = ["classes.dex", "lib/arm64-v8a/libmain.so", DRIVER_SLOT, "META-INF/*"]
+    remove = ["classes.dex", "lib/arm64-v8a/libmain.so", "AndroidManifest.xml", DRIVER_SLOT, "META-INF/*"]
     run("zip", "-q", "-d", str(apk), *remove)
 
     with zipfile.ZipFile(original) as z:
         z.extract("classes.dex", work)
         z.extract("lib/arm64-v8a/libmain.so", work)
+        z.extract("AndroidManifest.xml", work)
 
     run(sys.executable, str(ROOT / "patches/dex_always_extract.py"), str(work / "classes.dex"))
     run(sys.executable, str(ROOT / "patches/libmain_mali_driver.py"), str(work / "lib/arm64-v8a/libmain.so"))
+    run(sys.executable, str(ROOT / "patches/bump_version.py"), str(work / "AndroidManifest.xml"), "406")
 
     run("zip", "-q", str(apk), "classes.dex", cwd=work)
     run("zip", "-q", str(apk), "lib/arm64-v8a/libmain.so", cwd=work)
+    run("zip", "-q", str(apk), "AndroidManifest.xml", cwd=work)
 
     if driver:
         slot = work / DRIVER_SLOT
